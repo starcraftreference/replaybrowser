@@ -11,3 +11,14 @@
 - [TeamLiquid StarLeague 7](https://drive.google.com/file/d/14b-J6ijTEHH0daI-9sHKDIa-OggetlWC/view)
 - [DreamHack SC2 Masters: 2021 Summer](https://drive.google.com/file/d/1_D55iqElg2dViUR1vuG7zT0J5J0W1Uzm/view)
 
+
+# Descriptions of different things
+Proxy Hatch
+
+Exists an event s.t.
+event type = NNet.Replay.Tracker.SUnitInitEvent
+gameloop early enough (<180 seconds)
+distance_from_home > 70
+
+(also, game has >1 zerg)
+
