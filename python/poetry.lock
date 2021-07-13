@@ -97,6 +97,14 @@ python-versions = ">=3.5"
 traitlets = "*"
 
 [[package]]
+name = "mpyq"
+version = "0.2.5"
+description = "A Python library for extracting MPQ (MoPaQ) files."
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "parso"
 version = "0.8.2"
 description = "A Python Parser"
@@ -155,6 +163,20 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
+name = "s2protocol"
+version = "5.0.7.84643.0"
+description = "Python library to decode StarCraft II replay protocols"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+mpyq = ">=0.2.2"
+
+[package.extras]
+tests = ["tox"]
+
+[[package]]
 name = "traitlets"
 version = "5.0.5"
 description = "Traitlets Python configuration system"
@@ -179,7 +201,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "1ed4cfee8be0e9fad064155baeaf0524d5797c95a058d7b25732b5061fbaeb98"
+content-hash = "dd6193f51648b582c63c1c4cf59a9cbb2f4159972b9cbe6fd4a12ecca1efcb01"
 
 [metadata.files]
 appnope = [
@@ -214,6 +236,9 @@ matplotlib-inline = [
     {file = "matplotlib-inline-0.1.2.tar.gz", hash = "sha256:f41d5ff73c9f5385775d5c0bc13b424535c8402fe70ea8210f93e11f3683993e"},
     {file = "matplotlib_inline-0.1.2-py3-none-any.whl", hash = "sha256:5cf1176f554abb4fa98cb362aa2b55c500147e4bdbb07e3fda359143e1da0811"},
 ]
+mpyq = [
+    {file = "mpyq-0.2.5.tar.gz", hash = "sha256:30aaf5962be569f3f2b53978060cd047434ee4f5a215925dd6ff0fef04ec0007"},
+]
 parso = [
     {file = "parso-0.8.2-py2.py3-none-any.whl", hash = "sha256:a8c4922db71e4fdb90e0d0bc6e50f9b273d3397925e5e60a717e719201778d22"},
     {file = "parso-0.8.2.tar.gz", hash = "sha256:12b83492c6239ce32ff5eed6d3639d6a536170723c6f3f1506869f1ace413398"},
@@ -237,6 +262,10 @@ ptyprocess = [
 pygments = [
     {file = "Pygments-2.9.0-py3-none-any.whl", hash = "sha256:d66e804411278594d764fc69ec36ec13d9ae9147193a1740cd34d272ca383b8e"},
     {file = "Pygments-2.9.0.tar.gz", hash = "sha256:a18f47b506a429f6f4b9df81bb02beab9ca21d0a5fee38ed15aef65f0545519f"},
+]
+s2protocol = [
+    {file = "s2protocol-5.0.7.84643.0-py2-none-any.whl", hash = "sha256:6bb81bd5a284693c562396fbe538d6386bb0d4d315bcdeaab240fe855d170235"},
+    {file = "s2protocol-5.0.7.84643.0.tar.gz", hash = "sha256:515ee5553c5e53b2a50eb932e00b8ed704fb5dc4d06e30dfcad3ade8c1fce7bd"},
 ]
 traitlets = [
     {file = "traitlets-5.0.5-py3-none-any.whl", hash = "sha256:69ff3f9d5351f31a7ad80443c2674b7099df13cc41fc5fa6e2f6d3b0330b0426"},
