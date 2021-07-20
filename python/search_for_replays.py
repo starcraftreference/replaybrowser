@@ -18,7 +18,6 @@ BASE_CLOSENESS_THRESHOLD = 30
 print("pathlib.Path(__file__).absolute().parent.parent: {}".format(pathlib.Path(__file__).absolute().parent.parent))
 # REPLAY_DIR = pathlib.Path(__file__).absolute().parent.parent
 REPLAY_DIR = pathlib.Path(__file__).absolute().parent.parent / "replays"
-# REPLAY_DIR = pathlib.Path(r'C:\Users\Darren\Dropbox\files\sc2_replays\pro_library\by_matchup_rank_player_no_dupes')
 
 RACE_TRANSLATION_LOOKUP = {
     "저그": "Zerg",
@@ -399,8 +398,72 @@ def is_roach_rush(replay_file):
             print(replay_file)
             return True
 
+BEACONS = {
+    'BeaconArmy',
+    'BeaconAttack',
+    'BeaconAuto',
+    'BeaconClaim',
+    'BeaconCustom1',
+    'BeaconCustom2',
+    'BeaconCustom3',
+    'BeaconCustom4',
+    'BeaconDefend',
+    'BeaconDetect',
+    'BeaconExpand',
+    'BeaconHarass',
+    'BeaconIdle',
+    'BeaconRally',
+    'BeaconScout',
+}
+        
+def matches(replay_file, query):
+    replay_metadata = extract_replay_details(replay_file)
+    races = set()
+    for info in replay_metadata['player_lookup_by_name'].values():
+        races.add(info['race'])
+    # protoss player must exist
+    if "race" in query and query["race"] not in races:
+        return False
+    starting_pos_by_ctrlPID = replay_metadata["starting_pos_by_ctrlPID"]
+    unit_counts_by_ctrlPID = {ctrlPID: defaultdict(int) for ctrlPID in starting_pos_by_ctrlPID}
+    for event in get_replay_tracker_events_gen(replay_file):
+        e = copy.deepcopy(event)
+        gameloop = e["_gameloop"]
+        event_name = e["_event"]
+        if gameloop >= FRAMES_PER_SECOND*query["max_time"]:
+            break
+        elif event_name not in (
+                "NNet.Replay.Tracker.SUnitBornEvent",
+                "NNet.Replay.Tracker.SUnitInitEvent"):
+            continue
+        
+        controlPlayerId = e['m_controlPlayerId']
+        if controlPlayerId == 0:
+            # e.g., for neutral things like mineral fields and forcefields
+            continue
+        unitTypeName = e['m_unitTypeName'].decode('utf8')
+        if unitTypeName in BEACONS:
+            continue
+        unit_counts_by_ctrlPID[controlPlayerId][unitTypeName] += 1
+        x, y = e['m_x'], e['m_y']
+        start_x, start_y = starting_pos_by_ctrlPID[controlPlayerId]
+        dx, dy = x-start_x, y-start_y
+        dist_squared_from_home = dx*dx+dy*dy
+        # pprint.pprint(get_time_for_gameloop(gameloop))
+        # pprint.pprint(unit_counts_by_ctrlPID)
+        if all(unit_counts_by_ctrlPID[controlPlayerId][unit_name] >= threshold
+               for unit_name, proxy_predicate, threshold in query["units"]):
+            time = get_time_for_gameloop(gameloop)
+            map_title = replay_metadata["map_title"]
+            vs_label = replay_metadata["vs_label"]
+            utc_timestamp = replay_metadata["utc_timestamp"]
+            print("distance: {}".format(math.sqrt(dx*dx+dy*dy)))
+            print("{}: {} ({}), {}".format(time, vs_label, map_title, datetime.utcfromtimestamp(utc_timestamp)))
+            print(replay_file)
+            return True
+    
 
-
+        
 def is_proxy(dist_squared_from_home):
     return dist_squared_from_home > 70**2
 
@@ -423,7 +486,8 @@ THREE_CC_HELLION_BANSHEE = {
         ("Banshee", is_anywhere, 2),
         ("CommandCenter", is_anywhere, 3),
     ),
-    "max_time": 300,
+    "race": "Terran",
+    "max_time": 330,
 }
 
 PROXY_HATCH = {
@@ -433,14 +497,27 @@ PROXY_HATCH = {
     "max_time": 180,
 }
 
+CHARGELOT_ALLIN = {
+    "units": (
+        ("Zealot", is_anywhere, 8),
+    ),
+    "race": "Protoss",
+    "max_time": 330, # 5:00
+}
+
 def main():
+    # matches("/home/darren/gitrepo/replaybrowser/replays/teamliquid_starleague_7/Semifinals/Semifinals Match 2/Reynor VS Cure Game 4.SC2Replay", THREE_CC_HELLION_BANSHEE)
+    # return 0
+    abs_paths = []
     for root, dirs, files in os.walk(REPLAY_DIR):
         for name in files:
             if not name.endswith(".SC2Replay"):
                 continue
-            abs_path = os.path.join(root, name)
-            if is_roach_rush(abs_path):
-                continue
+            abs_paths.append(os.path.join(root, name))
+    for abs_path in abs_paths:
+        print("processing {}".format(abs_path))
+        if matches(abs_path, CHARGELOT_ALLIN):
+            continue
     return 0
 
 if __name__ == "__main__":
