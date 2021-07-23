@@ -16,6 +16,8 @@ metadata = MetaData()
 t_replays = Table(
     'replays', metadata,
     Column('id', BigInteger, Identity(always=True), primary_key=True),
+    Column('elapsed_gameloops', Integer, nullable=False),
+    Column('base_build', Integer, nullable=False),
     Column('map', Text, nullable=False),
     Column('utc_ts', BigInteger, nullable=False),
     Column('local_ts', BigInteger, nullable=False),
@@ -72,8 +74,9 @@ def get_replays_row_by_sha256(conn, sha256):
     return conn.execute(stmt).fetchone()
     
 
-def insert_replays_row(conn, map_name, utc_ts, local_ts, path, sha256):
+def insert_replays_row(conn, elapsed_gameloops, base_build, map_name, utc_ts, local_ts, path, sha256):
     stmt = t_replays.insert().values(
+        elapsed_gameloops=elapsed_gameloops, base_build=base_build,
         map=map_name, utc_ts=utc_ts, local_ts=local_ts, path=path, sha256=sha256)
     return conn.execute(stmt).inserted_primary_key
 

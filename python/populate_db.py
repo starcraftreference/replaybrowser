@@ -112,6 +112,7 @@ MAPS = (
         'Pilares de Ouro LE',
         '黃金之柱 - 天梯版',
         "Złote Filary ER",
+        "Goldene Säulen LE",
     ), (
         "Submarine LE",
         '潜水艇-天梯版',
@@ -151,6 +152,7 @@ MAPS = (
         "Romantyzm ER",
         "紫晶浪漫-天梯版",
         "羅曼死 - 天梯版",
+        "로맨티사이드 - 래더",
     ), (
         "Oxide LE",
         "锈化山巅-天梯版",
@@ -164,6 +166,8 @@ MAPS = (
         "Jagannatha EC",
         "Jagannatha ER",
         "Яганната РВ",
+        "자가나타 - 래더",
+        "Jagannatha",
     ), (
         "2000 Atmospheres LE",
         "2000大氣壓力 - 天梯版",
@@ -189,6 +193,15 @@ def get_replay_filenames(path):
             if name.endswith('.SC2Replay'):
                 yield os.path.join(root, name)
 
+def get_header_from_replay(replay_file_name):
+    try:
+        archive = mpyq.MPQArchive(replay_file_name)
+    except:
+        print("issue opening file: {}".format(replay_file_name))
+        raise
+    contents = archive.header['user_data_header']['content']
+    return versions.latest().decode_replay_header(contents)
+
 def get_data_from_replay(replay_file_name, internal_filename, extractor_func):
     try:
         archive = mpyq.MPQArchive(replay_file_name)
@@ -197,7 +210,6 @@ def get_data_from_replay(replay_file_name, internal_filename, extractor_func):
         raise
     contents = archive.header['user_data_header']['content']
     header = versions.latest().decode_replay_header(contents)
-
     base_build = header['m_version']['m_baseBuild']
     # protocol80669.py
     # protocol80949.py
@@ -231,6 +243,12 @@ def get_replay_initdata(replay_file_name):
         replay_file_name, 'replay.initData',
         lambda protocol, contents: protocol.decode_replay_initdata(contents))
 
+def get_replay_gamemetadata_json(replay_file_name):
+    return get_data_from_replay(
+        replay_file_name, 'replay.gamemetadata.json',
+        lambda protocol, contents: protocol.decode_replay_(contents))
+
+
 PLAYER_SETUP_EVENT_NAME = 'NNet.Replay.Tracker.SPlayerSetupEvent'
 def get_player_setup_events(filename):
     return tuple(itertools.takewhile(
@@ -245,6 +263,9 @@ def extract_replay_details(filename):
     # replay_details (replay_initdata has observers, though maybe you
     # can actually use it as a source of truth still if you look at
     # the "customInterface" flag?
+    header = get_header_from_replay(filename)
+    base_build = header['m_version']['m_baseBuild']
+    elapsed_gameloops = header['m_elapsedGameLoops']
     replay_details = get_replay_details(filename)
     WINDOWS_EPOCH_OFFSET = 116444736000000000
     timeLocalOffset = replay_details['m_timeLocalOffset']
@@ -378,6 +399,8 @@ def extract_replay_details(filename):
         "utc_timestamp": unix_ts,
         "local_timestamp": local_ts,
         "starting_pos_by_ctrlPID": starting_positions,
+        "elapsed_gameloops": elapsed_gameloops,
+        "base_build": base_build,
     }
 
 def populate_db_with_replay(filename):
@@ -391,6 +414,8 @@ def populate_db_with_replay(filename):
         return
 
     replay_details = extract_replay_details(filename)
+    elapsed_gameloops = replay_details['elapsed_gameloops']
+    base_build = replay_details['base_build']
     map_name = replay_details['map_title']
     if map_name not in MAP_LOOKUP:
         print(map_name)
@@ -399,8 +424,9 @@ def populate_db_with_replay(filename):
     utc_ts = replay_details['utc_timestamp']
     local_ts = replay_details['local_timestamp']
     path = filename
+
     with engine.begin() as conn:
-        replay_id = insert_replays_row(conn, map_name, utc_ts, local_ts, path, sha256)
+        replay_id = insert_replays_row(conn, elapsed_gameloops, base_build, map_name, utc_ts, local_ts, path, sha256)
 
 def main():
     for replay_filename in get_replay_filenames(REPLAY_DIR):

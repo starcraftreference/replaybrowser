@@ -3,6 +3,8 @@ DROP TABLE IF EXISTS replays_players;
 DROP TABLE IF EXISTS replays;
 CREATE TABLE replays (
   id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  elapsed_gameloops int NOT NULL,
+  base_build int NOT NULL,
   map text NOT NULL,
   utc_ts bigint NOT NULL,
   local_ts bigint NOT NULL,
