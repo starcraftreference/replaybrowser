@@ -9,6 +9,8 @@ python = "^3.9"
 ipython = "^7.25.0"
 mpyq = "^0.2.5"
 s2protocol = "^5.0.7"
+SQLAlchemy = "^1.4.22"
+psycopg2 = "^2.9.1"
 
 [tool.poetry.dev-dependencies]
 
