@@ -52,5 +52,7 @@ CREATE TABLE replays_tracker_events (
   player_id int,
   upgrade_type_name text,
   stats jsonb,
+  true_player_id int,
+  entity_name text,
   UNIQUE(replay_id, event_no)
 );

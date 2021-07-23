@@ -18,6 +18,8 @@ from model import (
     get_engine,
     get_replays_row_by_sha256,
     insert_replays_row,
+    insert_replays_players_rows,
+    insert_replays_tracker_events_rows,
 )
 
 REPLAY_DIR = pathlib.Path(__file__).absolute().parent.parent / "replays"
@@ -403,6 +405,74 @@ def extract_replay_details(filename):
         "base_build": base_build,
     }
 
+EVENT_WHITELIST_DICT = {
+    "NNet.Replay.Tracker.SUnitBornEvent": "UnitBorn",
+    "NNet.Replay.Tracker.SUnitInitEvent": "UnitInit",
+    "NNet.Replay.Tracker.SUnitDoneEvent": "UnitDone",
+    "NNet.Replay.Tracker.SUnitDiedEvent": "UnitDied",
+    "NNet.Replay.Tracker.SUpgradeEvent": "Upgrade",
+    "NNet.Replay.Tracker.SPlayerStatsEvent": "Stats",
+}
+def get_tracker_events_rows(filename, replay_id):
+    unit_lookup = {}
+    rows = []
+    for event_no, e in enumerate(get_replay_tracker_events_gen(filename)):
+        event_name = e["_event"]
+        if event_name not in EVENT_WHITELIST_DICT:
+            continue
+        entity_name = None
+        true_player_id = None
+        unit_tag_index = e.get("m_unitTagIndex")
+        unit_tag_recycle = e.get("m_unitTagRecycle")
+        unit_id = (unit_tag_index, unit_tag_recycle)
+        unit_type_name = e.get("m_unitTypeName")
+        if unit_type_name is not None:
+            unit_type_name = unit_type_name.decode('utf-8')
+            true_player_id = e["m_controlPlayerId"]
+            entity_name = unit_type_name
+            unit_lookup[unit_id] = (true_player_id, entity_name)
+        if unit_tag_index is not None and unit_type_name is None:
+            true_player_id, entity_name = unit_lookup[unit_id]
+        creator_ability_name = e.get("m_creatorAbilityName")
+        if creator_ability_name is not None:
+            creator_ability_name = creator_ability_name.decode('utf-8')
+        upgrade_type_name = e.get('m_upgradeTypeName')
+        if upgrade_type_name is not None:
+            upgrade_type_name = upgrade_type_name.decode('utf-8')
+            true_player_id = e['m_playerId']
+            entity_name = upgrade_type_name
+        if entity_name is not None and entity_name.startswith(('Beacon', 'Spray', 'GameHeart', 'Reward')):
+            continue
+        row = {
+            'replay_id': replay_id,
+            'event_no': event_no,
+            'event_name': EVENT_WHITELIST_DICT[event_name],
+            'event_id': e["_eventid"],
+            'gameloop': e["_gameloop"],
+            'bits': e["_bits"],
+            'unit_tag_index': unit_tag_index,
+            'unit_tag_recycle': unit_tag_recycle,
+            'unit_type_name': unit_type_name,
+            'control_player_id': e.get("m_controlPlayerId"),
+            'upkeep_player_id': e.get("m_upkeepPlayerId"),
+            'x': e.get("m_x"),
+            'y': e.get("m_y"),
+            'creator_unit_tag_index': e.get("m_creatorUnitTagIndex"),
+            'creator_unit_tag_recycle': e.get("m_creatorUnitTagRecycle"),
+            'creator_ability_name': creator_ability_name,
+            'killer_player_id': e.get("m_killerPlayerId"),
+            'killer_unit_tag_index': e.get("m_killerUnitTagIndex"),
+            'killer_unit_tag_recycle': e.get("m_killerUnitTagRecycle"),
+            'count': e.get('m_count'),
+            'player_id': e.get('m_playerId'),
+            'upgrade_type_name': upgrade_type_name,
+            'stats': e.get('m_stats'),
+            'true_player_id': true_player_id,
+            'entity_name': entity_name,
+        }
+        rows.append(row)
+    return rows
+
 def populate_db_with_replay(filename):
     engine = get_engine()
     m = hashlib.sha256()
@@ -425,12 +495,29 @@ def populate_db_with_replay(filename):
     local_ts = replay_details['local_timestamp']
     path = filename
 
+        
     with engine.begin() as conn:
         replay_id = insert_replays_row(conn, elapsed_gameloops, base_build, map_name, utc_ts, local_ts, path, sha256)
+        player_rows = [{
+            'replay_id': replay_id,
+            'clan': player_info["clan"],
+            'name': player_info["name"],
+            'race': player_info["race"],
+            'result': player_info["result"],
+            'player_list_id': player_info["player_list_id"],
+            'team_id': player_info["team_id"],
+            'working_set_slot_id': player_info["working_set_slot_id"],
+            'game_events_id': player_info["game_events_id"],
+            'tracker_events_id': player_info["tracker_events_id"],
+            'slot_id': player_info["slot_id"],
+        } for player_info in replay_details["player_lookup_by_name"].values()]
+        insert_replays_players_rows(conn, player_rows)
+        insert_replays_tracker_events_rows(conn, get_tracker_events_rows(filename, replay_id))
 
 def main():
     for replay_filename in get_replay_filenames(REPLAY_DIR):
         populate_db_with_replay(replay_filename)
+        break
     return 0
 
 if __name__ == "__main__":

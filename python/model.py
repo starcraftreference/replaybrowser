@@ -67,6 +67,8 @@ t_replays_tracker_events = Table(
     Column('player_id', Integer, default=None),
     Column('upgrade_type_name', Text, default=None),
     Column('stats', JSONB, default=None),
+    Column('true_player_id', Integer, default=None),
+    Column('entity_name', Text, default=None),
 )
 
 def get_replays_row_by_sha256(conn, sha256):
@@ -78,7 +80,7 @@ def insert_replays_row(conn, elapsed_gameloops, base_build, map_name, utc_ts, lo
     stmt = t_replays.insert().values(
         elapsed_gameloops=elapsed_gameloops, base_build=base_build,
         map=map_name, utc_ts=utc_ts, local_ts=local_ts, path=path, sha256=sha256)
-    return conn.execute(stmt).inserted_primary_key
+    return conn.execute(stmt).inserted_primary_key[0]
 
 def insert_replays_players_rows(conn, rows):
     assert rows
@@ -93,6 +95,7 @@ DEFAULT_REPLAYS_TRACKER_EVENTS_ROW = {
     'unit_tag_recycle': None,
     'unit_type_name': None,
     'control_player_id': None,
+    'upkeep_player_id': None,
     'x': None,
     'y': None,
     'creator_unit_tag_index': None,
