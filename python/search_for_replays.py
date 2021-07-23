@@ -415,13 +415,24 @@ BEACONS = {
     'BeaconRally',
     'BeaconScout',
 }
-        
+
+RACE_DICT = {
+    'P': "Protoss",
+    'T': "Terran",
+    'Z': "Zerg",
+}
+
 def matches(replay_file, query):
     replay_metadata = extract_replay_details(replay_file)
     races = set()
     for info in replay_metadata['player_lookup_by_name'].values():
         races.add(info['race'])
     # protoss player must exist
+    if "matchup" in query:
+        race1 = RACE_DICT[query["matchup"][0]]
+        race2 = RACE_DICT[query["matchup"][-1]]
+        if {race1, race2} != races:
+            return False
     if "race" in query and query["race"] not in races:
         return False
     starting_pos_by_ctrlPID = replay_metadata["starting_pos_by_ctrlPID"]
@@ -505,6 +516,14 @@ CHARGELOT_ALLIN = {
     "max_time": 330, # 5:00
 }
 
+THREE_BANSHEE = {
+    "units": (
+        ("Banshee", is_anywhere, 3),
+    ),
+    "matchup": "TvZ",
+    "max_time": 600,
+}
+
 def main():
     # matches("/home/darren/gitrepo/replaybrowser/replays/teamliquid_starleague_7/Semifinals/Semifinals Match 2/Reynor VS Cure Game 4.SC2Replay", THREE_CC_HELLION_BANSHEE)
     # return 0
@@ -515,8 +534,8 @@ def main():
                 continue
             abs_paths.append(os.path.join(root, name))
     for abs_path in abs_paths:
-        print("processing {}".format(abs_path))
-        if matches(abs_path, CHARGELOT_ALLIN):
+        # print("processing {}".format(abs_path))
+        if matches(abs_path, THREE_BANSHEE):
             continue
     return 0
 
