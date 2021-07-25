@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import collections
 import copy
 import hashlib
 import html
@@ -8,7 +9,6 @@ import os
 import pathlib
 import pprint
 import sys
-from collections import defaultdict
 from datetime import datetime, timedelta
 
 import mpyq
@@ -416,6 +416,8 @@ EVENT_WHITELIST_DICT = {
 def get_tracker_events_rows(filename, replay_id):
     unit_lookup = {}
     rows = []
+    counter = collections.defaultdict(int)
+    
     for event_no, e in enumerate(get_replay_tracker_events_gen(filename)):
         event_name = e["_event"]
         if event_name not in EVENT_WHITELIST_DICT:
@@ -443,6 +445,8 @@ def get_tracker_events_rows(filename, replay_id):
             entity_name = upgrade_type_name
         if entity_name is not None and entity_name.startswith(('Beacon', 'Spray', 'GameHeart', 'Reward')):
             continue
+        key = (EVENT_WHITELIST_DICT[event_name], true_player_id, entity_name)
+        counter[key] += 1
         row = {
             'replay_id': replay_id,
             'event_no': event_no,
@@ -469,6 +473,7 @@ def get_tracker_events_rows(filename, replay_id):
             'stats': e.get('m_stats'),
             'true_player_id': true_player_id,
             'entity_name': entity_name,
+            'nth_event': counter[key],
         }
         rows.append(row)
     return rows

@@ -69,6 +69,7 @@ t_replays_tracker_events = Table(
     Column('stats', JSONB, default=None),
     Column('true_player_id', Integer, default=None),
     Column('entity_name', Text, default=None),
+    Column('nth_event', Integer, nullable=False),
 )
 
 def get_replays_row_by_sha256(conn, sha256):
