@@ -260,6 +260,46 @@ def get_player_setup_events(filename):
             get_replay_tracker_events_gen(filename)
         )))
 
+def get_starting_positions(filename):
+    starting_positions = {}
+    for event in get_replay_tracker_events_gen(filename):
+        e = copy.deepcopy(event)
+        # example event we're looking for
+        # {'_bits': 584,
+        #  '_event': 'NNet.Replay.Tracker.SUnitBornEvent',
+        #  '_eventid': 1,
+        #  '_gameloop': 23518,
+        #  'm_controlPlayerId': 2,
+        #  'm_creatorAbilityName': b'StarportTrain',
+        #  'm_creatorUnitTagIndex': 262,
+        #  'm_creatorUnitTagRecycle': 3,
+        #  'm_unitTagIndex': 515,
+        #  'm_unitTagRecycle': 6,
+        #  'm_unitTypeName': b'Battlecruiser',
+        #  'm_upkeepPlayerId': 2,
+        #  'm_x': 36,
+        #  'm_y': 144}
+        gameloop = e["_gameloop"]
+        event_name = e["_event"]
+        if gameloop > 0:
+            break
+        elif event_name not in (
+                "NNet.Replay.Tracker.SUnitBornEvent",
+                "NNet.Replay.Tracker.SUnitInitEvent"):
+            continue
+
+        controlPlayerId = e['m_controlPlayerId']
+        if controlPlayerId == 0:
+            # e.g., for neutral things like mineral fields and forcefields
+            continue
+        unitTypeName = e['m_unitTypeName'].decode('utf8')
+        x, y = e['m_x'], e['m_y']
+
+        if event_name == "NNet.Replay.Tracker.SUnitBornEvent" and gameloop == 0:
+            if unitTypeName in ("Nexus", "Hatchery", "CommandCenter"):
+                starting_positions[controlPlayerId] = (x, y)
+    return starting_positions
+
 def extract_replay_details(filename):
     # first, get names of actual people playing, which is stored in
     # replay_details (replay_initdata has observers, though maybe you
@@ -354,44 +394,7 @@ def extract_replay_details(filename):
         vs_label_builder.append(", ".join(team_str_builder))
         result_builder.append(str(team[0]["result"]))
 
-    starting_positions = {}
-    for event in get_replay_tracker_events_gen(filename):
-        e = copy.deepcopy(event)
-        # example event we're looking for
-        # {'_bits': 584,
-        #  '_event': 'NNet.Replay.Tracker.SUnitBornEvent',
-        #  '_eventid': 1,
-        #  '_gameloop': 23518,
-        #  'm_controlPlayerId': 2,
-        #  'm_creatorAbilityName': b'StarportTrain',
-        #  'm_creatorUnitTagIndex': 262,
-        #  'm_creatorUnitTagRecycle': 3,
-        #  'm_unitTagIndex': 515,
-        #  'm_unitTagRecycle': 6,
-        #  'm_unitTypeName': b'Battlecruiser',
-        #  'm_upkeepPlayerId': 2,
-        #  'm_x': 36,
-        #  'm_y': 144}
-        gameloop = e["_gameloop"]
-        event_name = e["_event"]
-        if gameloop > 0:
-            break
-        elif event_name not in (
-                "NNet.Replay.Tracker.SUnitBornEvent",
-                "NNet.Replay.Tracker.SUnitInitEvent"):
-            continue
-
-        controlPlayerId = e['m_controlPlayerId']
-        if controlPlayerId == 0:
-            # e.g., for neutral things like mineral fields and forcefields
-            continue
-        unitTypeName = e['m_unitTypeName'].decode('utf8')
-        x, y = e['m_x'], e['m_y']
-
-        if event_name == "NNet.Replay.Tracker.SUnitBornEvent" and gameloop == 0:
-            if unitTypeName in ("Nexus", "Hatchery", "CommandCenter"):
-                starting_positions[controlPlayerId] = (x, y)
-
+    starting_positions = get_starting_positions(filename)
     
     return {
         "vs_label": " vs ".join(vs_label_builder),
@@ -417,6 +420,7 @@ def get_tracker_events_rows(filename, replay_id):
     unit_lookup = {}
     rows = []
     counter = collections.defaultdict(int)
+    starting_positions = get_starting_positions(filename)
     
     for event_no, e in enumerate(get_replay_tracker_events_gen(filename)):
         event_name = e["_event"]
@@ -447,6 +451,12 @@ def get_tracker_events_rows(filename, replay_id):
             continue
         key = (EVENT_WHITELIST_DICT[event_name], true_player_id, entity_name)
         counter[key] += 1
+        x, y = e.get("m_x"), e.get("m_y")
+        squared_dist = None
+        if x is not None and y is not None and true_player_id != 0:
+            x_home, y_home = starting_positions[true_player_id]
+            squared_dist = (x-x_home)**2 + (y-y_home)**2
+
         row = {
             'replay_id': replay_id,
             'event_no': event_no,
@@ -474,6 +484,7 @@ def get_tracker_events_rows(filename, replay_id):
             'true_player_id': true_player_id,
             'entity_name': entity_name,
             'nth_event': counter[key],
+            'squared_dist_from_home': squared_dist,
         }
         rows.append(row)
     return rows
@@ -489,6 +500,8 @@ def populate_db_with_replay(filename):
         return
 
     replay_details = extract_replay_details(filename)
+    if all(player_info["game_events_id"] is None for player_info in replay_details["player_lookup_by_name"].values()):
+        return
     elapsed_gameloops = replay_details['elapsed_gameloops']
     base_build = replay_details['base_build']
     map_name = replay_details['map_title']
@@ -521,8 +534,8 @@ def populate_db_with_replay(filename):
 
 def main():
     for replay_filename in get_replay_filenames(REPLAY_DIR):
+        print("processing {}".format(replay_filename))
         populate_db_with_replay(replay_filename)
-        break
     return 0
 
 if __name__ == "__main__":

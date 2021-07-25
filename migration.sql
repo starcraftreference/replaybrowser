@@ -55,5 +55,6 @@ CREATE TABLE replays_tracker_events (
   true_player_id int,
   entity_name text,
   nth_event int NOT NULL,
+  squared_dist_from_home int,
   UNIQUE(replay_id, event_no)
 );
