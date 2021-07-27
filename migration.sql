@@ -58,3 +58,4 @@ CREATE TABLE replays_tracker_events (
   squared_dist_from_home int,
   UNIQUE(replay_id, event_no)
 );
+CREATE INDEX build_index ON replays_tracker_events (entity_name, nth_event, event_name);
