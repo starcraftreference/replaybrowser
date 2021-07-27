@@ -221,7 +221,7 @@ def get_data_from_replay(replay_file_name, internal_filename, extractor_func):
     BUILD_REPLACEMENT = {
         # 80188: 78285,
         # 79998: 78285,
-        # 81102: 81009,
+        81102: 81009,
         81433: 81009,
     }
     base_build = BUILD_REPLACEMENT.get(base_build, base_build)
@@ -372,14 +372,16 @@ def extract_replay_details(filename):
     player_setup_events = get_player_setup_events(filename)
 
     for i, e in enumerate(player_setup_events):
-        player_id = e.pop('m_playerId')
-        slot_id = e.pop('m_slotId')
-        type_ = e.pop('m_type')
+        player_id = e['m_playerId']
+        slot_id = e['m_slotId']
+        type_ = e['m_type']
         # type == 1 might be real players
-        user_id = e.pop('m_userId') # same as slot_id, is the player id in replay_game_events
+        user_id = e['m_userId'] # same as slot_id, is the player id in replay_game_events
         player_info = player_lookup_by_list_id[i]
         # slot id is usually the same as working_slot_id, but it's kinda weird sometimes it looks like
-        assert player_info["game_events_id"] == user_id
+        if player_info["game_events_id"] != user_id:
+            print(player_setup_events)
+            assert False
         player_info["tracker_events_id"] = player_id
         player_info["slot_id"] = slot_id
 
@@ -454,6 +456,10 @@ def get_tracker_events_rows(filename, replay_id):
         x, y = e.get("m_x"), e.get("m_y")
         squared_dist = None
         if x is not None and y is not None and true_player_id != 0:
+            if true_player_id not in starting_positions:
+                print(starting_positions)
+                print(filename, replay_id)
+                assert False
             x_home, y_home = starting_positions[true_player_id]
             squared_dist = (x-x_home)**2 + (y-y_home)**2
 
@@ -499,8 +505,13 @@ def populate_db_with_replay(filename):
     if existing_row:
         return
 
-    replay_details = extract_replay_details(filename)
+    try:
+        replay_details = extract_replay_details(filename)
+    except:
+        return
     if all(player_info["game_events_id"] is None for player_info in replay_details["player_lookup_by_name"].values()):
+        return
+    if len(replay_details["player_lookup_by_name"]) != 2:
         return
     elapsed_gameloops = replay_details['elapsed_gameloops']
     base_build = replay_details['base_build']
@@ -533,7 +544,7 @@ def populate_db_with_replay(filename):
         insert_replays_tracker_events_rows(conn, get_tracker_events_rows(filename, replay_id))
 
 def main():
-    for replay_filename in get_replay_filenames(REPLAY_DIR):
+    for replay_filename in get_replay_filenames(REPLAY_DIR / 'wardi'):
         print("processing {}".format(replay_filename))
         populate_db_with_replay(replay_filename)
     return 0
