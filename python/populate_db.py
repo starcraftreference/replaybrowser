@@ -146,17 +146,23 @@ MAPS = (
         "光與影 - 天梯版",
         "라이트쉐이드 - 래더",
         "Lueur nocturne EC",
+        "Luces y sombras EE",
+        "Светотень РВ",
     ), (
         "Romanticide LE",
         "Romanticide EC",
         "Romanticídio LE",
+        "Romanticidio EE",
         "Romantizid LE",
         "Romantyzm ER",
+        "Романтицид РВ",
         "紫晶浪漫-天梯版",
         "羅曼死 - 天梯版",
         "로맨티사이드 - 래더",
     ), (
         "Oxide LE",
+        "Óxido EE",
+        "Оксид РВ",
         "锈化山巅-天梯版",
         "氧化物質 - 天梯版",
         "Oxid LE",
@@ -172,14 +178,20 @@ MAPS = (
         "Jagannatha",
     ), (
         "2000 Atmospheres LE",
+        "2000 Atmósferas EE",
+        "2000 атмосфер РВ",
         "2000大氣壓力 - 天梯版",
         "大气2000-天梯版",
+        "2000 애트모스피어 - 래더",
     ), (
         "Beckett Industries LE",
+        "베케트 인더스트리즈 - 래더",
         "贝克特工业-天梯版",
     ), (
         "Blackburn LE",
+        "블랙번 - 래더",
         "黑色燃烧-天梯版",
+        "Блэкберн РВ",
     ),
 )
 

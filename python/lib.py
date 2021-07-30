@@ -166,9 +166,63 @@ ORDER BY utc_ts DESC;
 
 """
 
+"""
+WITH t AS (
+SELECT DISTINCT replay_id, true_player_id
+FROM replays_tracker_events
+WHERE
+   entity_name = 'VoidRay'
+   AND nth_event = 1
+   AND event_name IN ('UnitBorn', 'UnitDone', 'UpgradeDone')
+   AND gameloop < 195*22.4
+INTERSECT
+SELECT DISTINCT replay_id, true_player_id
+FROM replays_tracker_events
+WHERE
+   entity_name = 'Zealot'
+   AND nth_event = 1
+   AND event_name IN ('UnitBorn', 'UnitDone', 'UpgradeDone')
+   AND gameloop < 195*22.4
+INTERSECT
+SELECT DISTINCT replay_id, true_player_id
+FROM replays_tracker_events
+WHERE
+   entity_name = 'Adept'    
+   AND nth_event = 1
+   AND event_name IN ('UnitBorn', 'UnitDone', 'UpgradeDone')
+   AND gameloop < 195*22.4
+)        
+SELECT replays.id, elapsed_gameloops, map, to_timestamp(utc_ts), clan, name, race, substring(path FROM 43) FROM replays, replays_players, t WHERE replays.id = replays_players.replay_id AND replays.id = t.replay_id
+ORDER BY utc_ts DESC;
 
+WITH t AS (
+SELECT DISTINCT replay_id, true_player_id
+FROM replays_tracker_events
+WHERE
+   entity_name = 'RoachWarren'
+   AND nth_event = 1
+   AND event_name IN ('UnitBorn', 'UnitDone', 'UpgradeDone')
+   AND gameloop < 120*22.4
+)
+SELECT replays.id, elapsed_gameloops, map, to_timestamp(utc_ts), clan, name, race, substring(path FROM 44) FROM replays, replays_players, t WHERE replays.id = replays_players.replay_id AND replays.id = t.replay_id
+ORDER BY utc_ts DESC;
+
+"""
 """
 medivac and 3 mines by 4:03
 7 marines
 cc
+"""
+
+"""
+SELECT replay_id FROM replays_players WHERE 
+"""
+
+"""
+WITH t AS (
+  SELECT replay_id, string_agg(name || ' (' || LEFT(race, 1) || ')', ' vs ') AS vs_str
+  FROM replays_players
+  GROUP BY replay_id
+)
+SELECT replays.id, vs_str, CONCAT(elapsed_gameloops/22.4, ' seconds')::interval, map, to_timestamp(utc_ts) at time zone 'UTC', substring(path FROM 44) from replays, t WHERE replays.id = t.replay_id AND path ILIKE '%trap%' ORDER BY utc_ts DESC;
 """
