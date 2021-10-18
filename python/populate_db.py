@@ -207,6 +207,22 @@ def get_replay_filenames(path):
             if name.endswith('.SC2Replay'):
                 yield os.path.join(root, name)
 
+def update_mtimes():
+    for filename in get_replay_filenames(REPLAY_DIR):
+        print(filename)
+        try:
+            replay_details = extract_replay_details(filename)
+        except:
+            continue
+        utc_timestamp = replay_details['utc_timestamp']
+        os.utime(filename, times=(utc_timestamp, utc_timestamp))
+
+def get_replay_filenames_sorted_by_timestamp(path):
+    return sorted(
+        get_replay_filenames(path),
+        key=lambda filename: os.stat(filename).st_mtime)
+
+                
 def get_header_from_replay(replay_file_name):
     try:
         archive = mpyq.MPQArchive(replay_file_name)
@@ -556,7 +572,7 @@ def populate_db_with_replay(filename):
         insert_replays_tracker_events_rows(conn, get_tracker_events_rows(filename, replay_id))
 
 def main():
-    for replay_filename in get_replay_filenames(REPLAY_DIR / 'wardi'):
+    for replay_filename in get_replay_filenames_sorted_by_timestamp(REPLAY_DIR):
         print("processing {}".format(replay_filename))
         populate_db_with_replay(replay_filename)
     return 0
